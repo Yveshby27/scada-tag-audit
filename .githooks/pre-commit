@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# ---
+# loop: promotion
+# source: ekko
+# promoted_at: 2026-07-19
+# original_problem: Ekko schema deltas (backend/convex/schema.ts) were shipping without
+#   corresponding updates to the lifecycle-map docs. A stateful feature grew a new
+#   state without the transition-surface being updated, and edge-case discovery lagged
+#   until the class-of-bug surfaced. The pre-commit gate turns "we should update the
+#   map" into a machine-enforced coupling.
+# ---
+#
+# PURPOSE
+#   Git pre-commit hook. Enforces cross-artifact consistency: when one tracked
+#   artifact ("source") is staged, at least one matching "peer" artifact must also
+#   have a content addition staged. Blocks the commit otherwise.
+#
+#   The generic pattern is:
+#     "if source X changes, peer artifact Y must also change (or you must bypass
+#      with a documented reason)."
+#
+#   Ekko's specific coupling: schema.ts -> lifecycle map.
+#   Other projects may want:
+#     migrations/*.sql -> ADR docs
+#     openapi.yaml -> client changelog
+#     protobuf defs -> release notes
+#     etc.
+#
+# HOW TO LOCALIZE
+#   Fill the placeholders below:
+#     {{SOURCE_ARTIFACT_PATH}} — path (or path pattern) that triggers the check
+#                                (e.g. "backend/convex/schema.ts")
+#     {{PEER_ARTIFACT_GLOB}} — the peer file(s) whose addition satisfies the check
+#                              (e.g. "docs/agentic-ai/lifecycles/*.md")
+#     {{CONSISTENCY_RULE_NAME}} — human name for the coupling
+#                                 (e.g. "lifecycle discipline")
+#     {{PEER_ARTIFACT_HUMAN}} — human description of the peer artifact
+#                                (e.g. "lifecycle map")
+#     {{PEER_TEMPLATE_PATH}} — path to the template used to author peers
+#                               (e.g. "docs/agentic-ai/playbooks/edge-case-discovery.md")
+#     {{PEER_DIR}} — directory where peers live (e.g. "docs/agentic-ai/lifecycles/")
+#
+# INSTALLATION
+#   Save at `.githooks/pre-commit`, chmod +x, and set:
+#     git config core.hooksPath .githooks
+#
+# BYPASS
+#   git commit --no-verify — for genuinely non-triggering edits (rename, comment,
+#   typo). CLAUDE.md guidance: investigate before bypassing.
+
+set -euo pipefail
+
+source_changed=$(git diff --cached --name-only -- {{SOURCE_ARTIFACT_PATH}})
+
+if [ -z "$source_changed" ]; then
+  exit 0
+fi
+
+# `--unified=0` strips context; `^\+[^+]` matches added content lines (excluding the +++ file header).
+peer_additions=$(git diff --cached --unified=0 -- '{{PEER_ARTIFACT_GLOB}}' | grep -E '^\+[^+]' || true)
+
+if [ -n "$peer_additions" ]; then
+  exit 0
+fi
+
+cat >&2 <<'EOF'
+
+  [pre-commit] BLOCKED — {{CONSISTENCY_RULE_NAME}} violation
+
+  {{SOURCE_ARTIFACT_PATH}} is staged but no {{PEER_ARTIFACT_GLOB}} update is.
+
+  {{CONSISTENCY_RULE_NAME}} requires changes to the source artifact be accompanied
+  by an update to the matching {{PEER_ARTIFACT_HUMAN}}.
+
+  Next step:
+    1. Identify which feature the source change affects.
+    2. Open or create the matching peer under {{PEER_DIR}}
+       (template at {{PEER_TEMPLATE_PATH}}).
+    3. Update the peer's tracked sections.
+    4. git add the peer and re-commit.
+
+  Bypass (only for non-triggering edits — typo, comment, rename):
+    git commit --no-verify
+
+EOF
+
+exit 1

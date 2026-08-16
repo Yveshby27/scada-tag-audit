@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Praxis-canonical commit-msg hook.
+#
+# Inherited from praxis at bootstrap. If .praxis-tickets.json enables it,
+# prepends the branch-encoded ticket ID to commit messages that don't already
+# carry it. Idempotent.
+#
+# See agentic-os/hooks/TEMPLATE-commit-msg.sh (in the praxis repo) for
+# provenance + explanation.
+
+set -euo pipefail
+
+msg_file="$1"
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+config="${repo_root}/.praxis-tickets.json"
+
+if [ ! -f "$config" ]; then
+  exit 0
+fi
+
+enabled=$(sed -n 's/.*"enabled"[[:space:]]*:[[:space:]]*\(true\|false\).*/\1/p' "$config" | head -1)
+if [ "${enabled:-false}" != "true" ]; then
+  exit 0
+fi
+
+pattern=$(sed -n 's/.*"branch_pattern"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config" | head -1)
+format=$(sed -n 's/.*"prepend_format"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config" | head -1)
+
+pattern="${pattern:-^(feat|fix|chore|refactor|docs)/(T[0-9]+)-}"
+format="${format:-[\$id] }"
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+if [ -z "$branch" ]; then
+  exit 0
+fi
+
+posix_pattern=$(printf '%s' "$pattern" | sed -E 's/\(\?<[a-zA-Z_]+>/(/g')
+if [[ ! "$branch" =~ $posix_pattern ]]; then
+  exit 0
+fi
+
+id=""
+for cap in "${BASH_REMATCH[@]:1}"; do
+  if [[ "$cap" =~ ^T[0-9]+$ ]]; then
+    id="$cap"
+    break
+  fi
+done
+if [ -z "$id" ]; then
+  exit 0
+fi
+
+if grep -q "$id" "$msg_file"; then
+  exit 0
+fi
+
+prefix="${format//\$id/$id}"
+tmp=$(mktemp)
+printf '%s' "$prefix" > "$tmp"
+cat "$msg_file" >> "$tmp"
+mv "$tmp" "$msg_file"
+
+exit 0

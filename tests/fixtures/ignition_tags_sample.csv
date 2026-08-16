@@ -1,0 +1,12 @@
+Path,Data Type,OPC Server,OPC Item Path,Engineering Units,Format String,Scaled,Documentation
+Motors/Motor1_Run,Boolean,Ignition OPC UA Server,[Global_PLC]Motor1_Run,,,false,Motor 1 run status
+Motors/Motor1_Speed,Float4,Ignition OPC UA Server,[Global_PLC]Motor1_Speed,RPM,#0.0,false,Motor 1 speed feedback
+Flow/Flow_GPM,Float4,Ignition OPC UA Server,[Global_PLC]Flow_GPM,GPM,#0.0,false,Main flow rate
+Tanks/Tank1_Level,Float4,Ignition OPC UA Server,[Global_PLC]Tank1_Level,ft,#0.00,false,Tank 1 level
+Valves/HMI_Valve1_Cmd,Boolean,Ignition OPC UA Server,[Global_PLC]Valve1_Cmd,,,false,Valve 1 command
+Alarms/HighTempAlarm,Boolean,Ignition OPC UA Server,[Global_PLC]HighTempAlarm,,,false,High temperature alarm
+Pumps/Pump2_Run,Boolean,Ignition OPC UA Server,[Global_PLC]Pump2_Run,,,false,Pump 2 run status (HMI binding drifts from PLC Pump_2_Run)
+Sensors/Temp1_C,Float4,Ignition OPC UA Server,[Global_PLC]Temp1_C,C,#0.0,false,Temperature sensor 1 (HMI binding drifts from PLC Temp_1_C)
+Legacy/OldValve_Cmd,Boolean,Ignition OPC UA Server,[Global_PLC]OldValve_Cmd,,,false,Legacy valve command
+Setpoints/Flow_SP,Float4,Ignition OPC UA Server,[Global_PLC]Flow_SP,GPM,#0.0,false,Flow setpoint
+Motors/Motor2_Amps,Int4,Ignition OPC UA Server,[Global_PLC]Motor2_Amps,A,#0,false,Motor 2 current (TYPE MISMATCH: PLC is REAL)
