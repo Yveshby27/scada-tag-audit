@@ -58,9 +58,19 @@ pip install -e ".[dev]"
 pytest
 ```
 
-## v0.1 scope + roadmap
+## v0.1 scope + limitations + roadmap
 
-Alpha. Ignition tag CSV + Rockwell L5X only. Wonderware .aaGDB, Kepware XML, FactoryTalk, Iconics, and OPC UA custom information models are on the v0.2+ roadmap if the wedge holds.
+**In scope:** Ignition tag CSV + Rockwell Studio 5000 L5X exports. Base tag reconciliation across scalar data types (BOOL, SINT, INT, DINT, REAL, LREAL, STRING).
+
+**Known v0.1 limitations (will produce false findings; be aware):**
+
+- **UDT member references are not resolved.** If your Ignition HMI references a Rockwell UDT member (e.g. `[PLC]Pump_1.Speed` where `Pump_1` is a UDT-typed base tag), the parser extracts the last segment (`Speed`) and fails to find it as a top-level PLC tag. Result: false `orphaned_hmi_binding` finding. UDT-heavy PlantPAx projects will surface many of these. v0.2 roadmap.
+- **Alias chains are not resolved.** L5X alias tags parse as base tags, but the drift engine does not chase `AliasFor` references to detect when an HMI reference through an alias resolves to a valid base tag. Simple flat aliases still match when the HMI references either name directly. v0.2 roadmap.
+- **Wonderware .aaGDB, Kepware XML, FactoryTalk, Iconics, OPC UA custom information models** — not parsed. v0.2+ roadmap if the wedge holds.
+
+**Practical implication:** run against a small representative slice of your project first to calibrate the false-positive rate for your codebase. If UDT-member false-orphans dominate, wait for v0.2 UDT support.
+
+Feedback on which limitations hurt most is exactly what determines the v0.2 priority. Reach out via the article link below.
 
 ## Background
 

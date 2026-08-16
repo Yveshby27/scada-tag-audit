@@ -51,6 +51,41 @@ def test_reconcile_produces_expected_categories():
     assert len(by_cat[DriftCategory.EXACT_MATCH]) >= 1
 
 
+def test_type_mismatch_takes_precedence_over_naming_drift():
+    """Regression test for v0.1.1 bug fix.
+
+    v0.1.0 only checked type compatibility in the exact-match branch. If an
+    HMI reference resolved to a PLC tag via name normalization AND had an
+    incompatible data type, the type mismatch was silently masked as
+    naming-convention-drift. v0.1.1 checks types in both branches; the
+    higher-severity finding wins.
+    """
+    from scada_tag_audit.parsers.ignition_csv import Tag
+
+    plc = [Tag(name="Motor_2_Amps", data_type="REAL", source="rockwell")]
+    hmi = [
+        Tag(
+            name="Motors/Motor2_Amps",
+            address="[Global_PLC]Motor2_Amps",
+            data_type="Int4",
+            source="ignition",
+        )
+    ]
+    findings = reconcile(hmi, plc)
+
+    by_cat = {cat: [] for cat in DriftCategory}
+    for f in findings:
+        by_cat[f.category].append(f)
+
+    # Type mismatch should fire even though names resolve only via normalization
+    assert len(by_cat[DriftCategory.TYPE_MISMATCH]) == 1
+    tm = by_cat[DriftCategory.TYPE_MISMATCH][0]
+    assert tm.reference_key == "Motor2_Amps"
+    assert "naming drift" in tm.notes.lower()
+    # Naming drift should NOT fire on this tag (type mismatch wins)
+    assert len(by_cat[DriftCategory.NAMING_CONVENTION_DRIFT]) == 0
+
+
 def test_render_report_produces_valid_html():
     hmi = parse_ignition_csv(FIX / "ignition_tags_sample.csv")
     plc = parse_rockwell_l5x(FIX / "rockwell_tags_sample.L5X")

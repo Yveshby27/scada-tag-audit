@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scada-tag-audit"
-version = "0.1.0"
+version = "0.1.1"
 description = "Pre-commissioning cross-vendor tag database drift audit for SCADA/HMI integrators. Reads Ignition tag CSVs + Rockwell L5X exports; surfaces naming, address, orphan, unit, and type drift as a self-contained HTML report."
 readme = "README.md"
 license = "MIT"

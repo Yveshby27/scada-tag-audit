@@ -189,15 +189,28 @@ def reconcile(hmi_tags: list[Tag], plc_tags: list[Tag]) -> list[DriftFinding]:
         norm_match = plc_by_norm.get(norm_ref)
         if norm_match is not None:
             referenced_plc.add(norm_match.name)
-            findings.append(
-                DriftFinding(
-                    category=DriftCategory.NAMING_CONVENTION_DRIFT,
-                    hmi_tag=hmi,
-                    plc_tag=norm_match,
-                    reference_key=ref,
-                    notes=f"HMI references '{ref}', normalized to '{norm_ref}'; PLC tag is '{norm_match.name}'. Reference resolves under normalization but not exact match.",
+            # Type mismatch takes precedence over naming drift when both apply
+            # (v0.1.1: bug fix — earlier releases only checked types in exact-match branch).
+            if not _types_compatible(norm_match.data_type, hmi.data_type):
+                findings.append(
+                    DriftFinding(
+                        category=DriftCategory.TYPE_MISMATCH,
+                        hmi_tag=hmi,
+                        plc_tag=norm_match,
+                        reference_key=ref,
+                        notes=f"PLC type '{norm_match.data_type}' incompatible with HMI type '{hmi.data_type}'. Also has naming drift: HMI references '{ref}' (normalized '{norm_ref}') vs PLC '{norm_match.name}'.",
+                    )
                 )
-            )
+            else:
+                findings.append(
+                    DriftFinding(
+                        category=DriftCategory.NAMING_CONVENTION_DRIFT,
+                        hmi_tag=hmi,
+                        plc_tag=norm_match,
+                        reference_key=ref,
+                        notes=f"HMI references '{ref}', normalized to '{norm_ref}'; PLC tag is '{norm_match.name}'. Reference resolves under normalization but not exact match.",
+                    )
+                )
             continue
 
         findings.append(
